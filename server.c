@@ -16,7 +16,8 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;
     int cnt = 10000;
     struct mptcp_sub_ids *ids;
-    int i, optlen;
+    int i, optlen, flags = 0;
+    char *p;
 
     char sendBuff[1025];
     time_t ticks;
@@ -38,30 +39,40 @@ int main(int argc, char *argv[])
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
         ticks = time(NULL);
-	
-        while (cnt--) {
-            snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-            send(connfd, sendBuff, strlen(sendBuff), 0x00010000);
-        }
-
-	cnt = 10000;
-
-	while (cnt--) {
-            snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-            send(connfd, sendBuff, strlen(sendBuff), 0x00020000);
-        }
-
+ 
 	optlen = 32;
 	ids = malloc(optlen);
 
 	getsockopt(connfd, IPPROTO_TCP, MPTCP_GET_SUB_IDS, ids, &optlen);
-	printf("\nsubflow_count = %i\n\n", ids->sub_count);
-	
+	printf("\nsubflow_count = %i\n", ids->sub_count);	
 	for (i = 0; i < ids->sub_count; i++) {
-		printf("subflow_id = %i\n", ids->sub_status[i].id);
-		printf("fully_established: %i\n\n", ids->sub_status[i].fully_established);
+		printf("send data on subflow_id = %i\n", ids->sub_status[i].id);
+		p = &flags;
+		p[2] |= (ids->sub_status[i].id);
+		while (cnt--) {
+			snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
+           		send(connfd, sendBuff, strlen(sendBuff), flags);
+		}
+		cnt = 10000;
 	}
-
+	
+	/* additional MPTCP subflows will be added after the first one
+	 * is fully established. First subflow is fully-established
+	 * after we send one window at data (see RFC6824 for details)
+	 */
+	optlen = 32;
+	getsockopt(connfd, IPPROTO_TCP, MPTCP_GET_SUB_IDS, ids, &optlen);
+	printf("\nsubflow_count = %i\n", ids->sub_count);
+	for (i = 0; i < ids->sub_count; i++) {
+		printf("send data on subflow_id = %i\n", ids->sub_status[i].id);
+		p = &flags;
+		p[2] |= (ids->sub_status[i].id);
+		while (cnt--) {
+			snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
+           		send(connfd, sendBuff, strlen(sendBuff), flags);
+		}
+		cnt = 10000;
+	}
 	
         close(connfd);
         sleep(1);
