@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <time.h>
 #include <linux/tcp.h>
 
 int main(int argc, char *argv[])
@@ -18,9 +17,7 @@ int main(int argc, char *argv[])
     struct mptcp_sub_ids *ids;
     int i, optlen, flags = 0;
     char *p;
-
     char sendBuff[1025];
-    time_t ticks;
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -37,8 +34,6 @@ int main(int argc, char *argv[])
     while(1)
     {
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-
-        ticks = time(NULL);
  
 	optlen = 32;
 	ids = malloc(optlen);
@@ -47,11 +42,14 @@ int main(int argc, char *argv[])
 	printf("\nsubflow_count = %i\n", ids->sub_count);	
 	for (i = 0; i < ids->sub_count; i++) {
 		printf("send data on subflow_id = %i\n", ids->sub_status[i].id);
+		flags = 0;
 		p = &flags;
 		p[2] |= (ids->sub_status[i].id);
 		while (cnt--) {
-			snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-           		send(connfd, sendBuff, strlen(sendBuff), flags);
+			snprintf(sendBuff, sizeof(sendBuff),
+			"Data from subflow id: %i, iteration: %i\n",
+			ids->sub_status[i].id, cnt);
+			send(connfd, sendBuff, strlen(sendBuff), flags);
 		}
 		cnt = 10000;
 	}
@@ -63,13 +61,17 @@ int main(int argc, char *argv[])
 	optlen = 32;
 	getsockopt(connfd, IPPROTO_TCP, MPTCP_GET_SUB_IDS, ids, &optlen);
 	printf("\nsubflow_count = %i\n", ids->sub_count);
+	//sleep(5);
 	for (i = 0; i < ids->sub_count; i++) {
 		printf("send data on subflow_id = %i\n", ids->sub_status[i].id);
+		flags = 0;
 		p = &flags;
 		p[2] |= (ids->sub_status[i].id);
 		while (cnt--) {
-			snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-           		send(connfd, sendBuff, strlen(sendBuff), flags);
+ 			snprintf(sendBuff, sizeof(sendBuff),
+			"Data from subflow id: %i, iteration: %i\n",
+			ids->sub_status[i].id, cnt);
+			send(connfd, sendBuff, strlen(sendBuff), flags);
 		}
 		cnt = 10000;
 	}
