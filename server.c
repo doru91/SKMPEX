@@ -90,14 +90,7 @@ send_data:
 	flags = 0;
 	p = &flags;
 	p[2] |= (ids->sub_status[i].id);
-	
-	/* sleep before sending data on different subflows 
-	 * issue: SKB coalescing happens on the send side if we send
-	 * data on 2 different subflows without sleep between them (last
-	 * SKB from the send call on the first subflow contains data from
-	 * the send call on the second subflow) 
-	 */
-	sleep(2);
+
 	cnt = 1000;
 	while (cnt--) {
 	    snprintf(sendBuff, sizeof(sendBuff),
@@ -115,7 +108,6 @@ send_data:
     if (!used_both_subflows)
     	goto send_data;
 
-    sleep(2);
     printf("send data on random subflow\n");
     flags = 0;
     while (cnt--) {
