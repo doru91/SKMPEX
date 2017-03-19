@@ -48,15 +48,15 @@ int main(int argc, char *argv[])
 	int sockfd = 0, n = 0;
 	char recvBuff[1024];
 	struct sockaddr_in serv_addr;
-	int i, ids, optlen, flags;
+	int i, ids, optlen, flags, iteration = 0;
 
-	if(argc != 2) {
+	if (argc != 2) {
 		printf("usage: %s <ip of server>\n",argv[0]);
 		return 1;
 	}
 
 	memset(recvBuff, '0',sizeof(recvBuff));
-	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("\n Error : Could not create socket \n");
 		return 1;
 	}
@@ -89,6 +89,13 @@ receive_data:
 
 	if (errno) {
 		printf("errno is set: %i\n", errno);
+		/* 3 receive iterations (data from subflow1,
+		 * then subflow2, then random subflow)
+		 */
+		if (++iteration == 3) {
+			close(sockfd);
+			return 0;
+		}
 
 		if (flags == SUBFLOW1_PATH_INDEX) {
 			flags = SUBFLOW2_PATH_INDEX;
